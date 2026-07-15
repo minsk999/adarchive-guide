@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ad.archive 사용 설명서</title>
 <meta name="description" content="사내 NAS 광고 영상 갤러리 ad.archive 사용 설명서 — 찾고, 재생하고, 가져가세요.">
+<!-- 파비콘 — ad.archive 앱과 동일 SVG(검은 원 + 흰 마크). 앱 public/favicon.svg를 data URI로 인라인 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1NiA1NiIgZmlsbD0ibm9uZSI+PGNpcmNsZSBjeD0iMjgiIGN5PSIyOCIgcj0iMjciIGZpbGw9IiMwMDAiLz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMy43NiwxNCkgc2NhbGUoMC4xNCkiPjxtYXNrIGlkPSJmYXZMb2dvTWFzayI+PHBhdGggcGF0aExlbmd0aD0iMSIgZD0iTTEzOC4zNiwxNTkuNzkgQTcwLjUsNzAuNSAwIDEgMSAxNjAuNzksMTM3LjM2IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvbWFzaz48cGF0aCBtYXNrPSJ1cmwoI2ZhdkxvZ29NYXNrKSIgZmlsbD0iI2Y1ZjVmNCIgZD0iTTEyNC41LDE0MWgtMjMuNWMtMjIuNjEsMC00MS0xOC4zOS00MS00MXMxOC4zOS00MSw0MS00MSw0MSwxOC4zOSw0MSw0MXYyMS41aDU5di0yMS41QzIwMSw0NC43NywxNTYuMjMsMCwxMDEsMGgwQzQ1Ljc3LDAsMSw0NC43NywxLDEwMGgwYzAsNTUuMjMsNDQuNzcsMTAwLDEwMCwxMDBoMjMuNXYtNTlaIi8+PGNpcmNsZSBjeD0iMTcxLjUiIGN5PSIxNjkiIHI9IjMxIiBmaWxsPSIjZjVmNWY0Ii8+PC9nPjwvc3ZnPg==">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
@@ -12,6 +14,7 @@
     --stone-50:#fafaf9; --stone-100:#f5f5f4; --stone-150:#efedeb; --stone-200:#f0eeed; --stone-300:#d6d3d1;
     --stone-400:#a6a09b; --stone-500:#75726f; --stone-600:#57534e; --stone-700:#44403b; --black:#0c0a09;
     --amber:#d97706; --line:#eae7e4; --r:1.15rem;
+    --r-card:1.75rem; /* ad.archive 앱 시그니처 라운드(28px) — superellipse와 함께 씀. 짧은 박스는 알약처럼 클램프 */
     --nav-w:270px; --content-max:768px;
     --font:'Pretendard Variable', Pretendard, -apple-system, 'Malgun Gothic', 'Segoe UI', sans-serif;
   }
@@ -42,9 +45,10 @@
   .navgroup .lbl { font-size:0.68rem; font-weight:800; letter-spacing:0.08em; color:var(--stone-400);
     text-transform:uppercase; padding:0 0.7rem; margin-bottom:0.35rem; }
   .navgroup a { display:flex; align-items:center; gap:0.55rem; text-decoration:none; color:var(--stone-500);
-    font-size:0.875rem; font-weight:600; padding:0.42rem 0.7rem; border-radius:0.65rem; position:relative;
+    font-size:0.875rem; font-weight:600; padding:0.42rem 0.7rem; border-radius:var(--r-card); position:relative;
     transition:background 0.16s, color 0.16s; }
-  .navgroup a .n { font-size:0.72rem; font-weight:800; color:var(--stone-400); font-variant-numeric:tabular-nums; min-width:1.1em; }
+  .navgroup a .n { font-size:0.72rem; font-weight:800; color:var(--stone-400); font-variant-numeric:tabular-nums;
+    min-width:1.1em; line-height:1; transform:translateY(1px); } /* 작은 숫자가 한글보다 높아 보여 광학 보정(하단 정렬 쪽으로) */
   .navgroup a:hover { background:var(--stone-150); color:var(--black); }
   .navgroup a.active { background:var(--black); color:var(--stone-50); }
   .navgroup a.active .n { color:var(--stone-400); }
@@ -65,7 +69,12 @@
   h1 { font-size:clamp(2rem, 4.4vw, 2.9rem); font-weight:900; letter-spacing:-0.038em; line-height:1.42; margin:0 0 1.1rem; }
   h1 .pill { display:inline-block; background:var(--black); color:var(--stone-100); border-radius:999px;
     padding:0.12em 0.5em; margin:0 0.06em; line-height:1.15; }  /* 앱의 .pill-btn과 동일 — 양끝 완전 알약 */
-  @supports (corner-shape:superellipse(1.3)) { h1 .pill { corner-shape:superellipse(1.3); } }
+  /* 앱 시그니처 곡률 — 광고 알약과 동일한 superellipse를 메뉴 박스·CTA 알약에도 적용 */
+  @supports (corner-shape:superellipse(1.3)) {
+    h1 .pill,
+    .navgroup a,
+    .sb-cta { corner-shape:superellipse(1.3); }
+  }
   .hero .lead { color:var(--stone-500); font-size:1.08rem; margin:0; max-width:38em; }
 
   section { padding-top:3.6rem; scroll-margin-top:1.5rem; }
@@ -413,12 +422,26 @@
     navLinks.forEach(a => a.classList.remove('active'));
     const a = map.get(id); if (a) a.classList.add('active');
   };
-  const io = new IntersectionObserver(entries => {
-    // 화면 상단에 가장 가까운(위쪽) 보이는 섹션을 활성으로
-    const vis = entries.filter(e => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-    if (vis.length) setActive(vis[0].target.id);
-  }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
-  sections.forEach(s => io.observe(s));
+  // 결정적 스파이: 뷰포트 위 22% 기준선을 지난 마지막 섹션을 활성으로.
+  // IntersectionObserver 밴드 방식은 마지막 섹션(#faq)이 짧아 기준선까지 못 올라오면
+  // 직전 섹션(#mobile)에 포커스가 남는 버그가 있어 스크롤 위치 계산으로 교체.
+  const docEl = document.documentElement;
+  const spy = () => {
+    const line = window.scrollY + window.innerHeight * 0.22;
+    let active = sections[0].id;
+    for (const s of sections) {
+      const top = s.getBoundingClientRect().top + window.scrollY;
+      if (top - 24 <= line) active = s.id; else break;
+    }
+    // 페이지 최하단이면(마지막 섹션이 기준선까지 못 올라오는 경우) 마지막 섹션 강제 활성
+    if (window.scrollY + window.innerHeight >= docEl.scrollHeight - 2) active = sections[sections.length - 1].id;
+    setActive(active);
+  };
+  window.addEventListener('scroll', spy, { passive: true });
+  window.addEventListener('resize', spy);
+  // 목차 클릭 시 즉시 그 항목을 활성 표시(스무스 스크롤 도중 깜빡임 방지)
+  navLinks.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+  spy();
 </script>
 </body>
 </html>
