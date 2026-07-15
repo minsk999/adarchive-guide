@@ -422,25 +422,37 @@
     navLinks.forEach(a => a.classList.remove('active'));
     const a = map.get(id); if (a) a.classList.add('active');
   };
-  // 결정적 스파이: 뷰포트 위 22% 기준선을 지난 마지막 섹션을 활성으로.
-  // IntersectionObserver 밴드 방식은 마지막 섹션(#faq)이 짧아 기준선까지 못 올라오면
-  // 직전 섹션(#mobile)에 포커스가 남는 버그가 있어 스크롤 위치 계산으로 교체.
+  // 스크롤 스파이 — 현재 위치의 섹션을 강조.
+  // ⚠️ 마지막 두 섹션(#mobile·#faq)은 페이지 끝에 붙어 있어, 세로가 큰 뷰포트에선 그 위로
+  //    스크롤할 여백이 없다 → 클릭해도 스크롤이 '바닥'에 착지한다. 정적 기준선 하나로는
+  //    둘 다 클릭 가능하게 만들 수 없으므로:
+  //    (1) 목차 클릭은 scrollend까지 스파이를 잠가 클릭한 항목을 확정 유지하고
+  //    (2) 손으로 바닥까지 내리면 마지막 섹션(#faq)을 활성으로 둔다.
   const docEl = document.documentElement;
+  let clickLock = false, clickedId = null, lockSafety = null;
   const spy = () => {
+    if (clickLock) return;                       // 목차 클릭 스크롤 중엔 덮어쓰지 않음
     const line = window.scrollY + window.innerHeight * 0.22;
     let active = sections[0].id;
     for (const s of sections) {
       const top = s.getBoundingClientRect().top + window.scrollY;
       if (top - 24 <= line) active = s.id; else break;
     }
-    // 페이지 최하단이면(마지막 섹션이 기준선까지 못 올라오는 경우) 마지막 섹션 강제 활성
+    // 손 스크롤로 페이지 최하단에 닿으면 마지막 섹션(짧아서 기준선까지 못 올라옴) 활성
     if (window.scrollY + window.innerHeight >= docEl.scrollHeight - 2) active = sections[sections.length - 1].id;
     setActive(active);
   };
+  const releaseLock = () => { if (!clickLock) return; clickLock = false; clearTimeout(lockSafety); if (clickedId) setActive(clickedId); };
   window.addEventListener('scroll', spy, { passive: true });
   window.addEventListener('resize', spy);
-  // 목차 클릭 시 즉시 그 항목을 활성 표시(스무스 스크롤 도중 깜빡임 방지)
-  navLinks.forEach(a => a.addEventListener('click', () => setActive(a.getAttribute('href').slice(1))));
+  window.addEventListener('scrollend', releaseLock);        // 스무스 스크롤이 끝나면 잠금 해제
+  navLinks.forEach(a => a.addEventListener('click', () => {
+    clickedId = a.getAttribute('href').slice(1);
+    setActive(clickedId);                                   // 클릭 즉시 활성
+    clickLock = true;                                       // scrollend까지(또는 안전 타임아웃) 스파이 잠금
+    clearTimeout(lockSafety);
+    lockSafety = setTimeout(releaseLock, 1200);             // 스크롤 불필요(이미 보임) 등 scrollend 미발생 대비
+  }));
   spy();
 </script>
 </body>
