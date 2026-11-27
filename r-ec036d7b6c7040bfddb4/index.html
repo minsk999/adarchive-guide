@@ -102,6 +102,12 @@ body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--f);over
 .fx span{font-size:14px;color:var(--s600);line-height:1.55}
 .fx .ck{width:24px;height:24px;border-radius:50%;background:var(--ink);display:grid;place-items:center;color:var(--s100)}
 .fx .ck svg{width:12px;height:12px}
+/* 항목이 7개 넘으면(11-27 · 9개) 세 줄이 한 화면에 들게 — 체크 표시를 왼쪽에 붙이고 여백·글자를 줄인다 */
+.fixes.dense{top:268px;gap:10px}
+.fixes.dense .fx{position:relative;padding:15px 18px 14px 54px;gap:4px}
+.fixes.dense .fx .ck{position:absolute;left:18px;top:15px}
+.fixes.dense .fx b{font-size:16px}
+.fixes.dense .fx span{font-size:13px;line-height:1.5}
 .fixhd{position:absolute;left:64px;top:112px;display:flex;flex-direction:column;gap:14px}
 .fixhd h2{margin:0;font-size:46px;font-weight:700;letter-spacing:-.025em}
 .fixhd p{margin:0;font-size:19px;color:var(--s600)}
@@ -260,7 +266,9 @@ function makeRunner(st){
   R.cur = null; R.mo = null;
   R.cursor = (x=320, y=240) => { R.cur = h('div','k-cur',null,st); R.cur.style.left=x+'px'; R.cur.style.top=y+'px'; return R.cur; };
   R.pos = el => { const s=st.getBoundingClientRect(), r=el.getBoundingClientRect(), k=s.width/640; return { x:(r.left-s.left+r.width/2)/k, y:(r.top-s.top+r.height/2)/k, w:r.width/k, h:r.height/k, l:(r.left-s.left)/k, t:(r.top-s.top)/k }; };
-  R.move = async (x, y, ms=600) => { if(!R.cur) R.cursor(x,y); R.cur.style.transitionDuration=(RM?0:ms)+'ms'; R.cur.style.left=x+'px'; R.cur.style.top=y+'px'; await R.wait(ms+40); };
+  /* 장면들이 await 없이 띄우는 것(move·keys·toast·fmove — R.to 도 move 를 걸어 두고 기다린다) — 장을 넘길 때 abort 가 처리 안 된 오류로 콘솔에 새지 않게 */
+  const bg = fn => (...a) => { const p = fn(...a); p.catch(() => {}); return p; };
+  R.move = bg(async (x, y, ms=600) => { if(!R.cur) R.cursor(x,y); R.cur.style.transitionDuration=(RM?0:ms)+'ms'; R.cur.style.left=x+'px'; R.cur.style.top=y+'px'; await R.wait(ms+40); });
   /* 몰핑 박스 — 대상 위에 회색 둥근 박스(앱의 커서 박스). null = 숨김 */
   R.hov = (el, pad=4) => { if(!R.mo) R.mo=h('div','k-morph',null,st); if(!el){ R.mo.classList.remove('on'); return; } const p=R.pos(el); const s=R.mo.style; s.left=(p.l-pad)+'px'; s.top=(p.t-pad)+'px'; s.width=(p.w+pad*2)+'px'; s.height=(p.h+pad*2)+'px'; s.borderRadius=Math.min(16,(p.h+pad*2)/2)+'px'; R.mo.classList.add('on'); };
   R.to = async (el, ms=600, dx=0, dy=0, box=true) => { const p=R.pos(el); const m=R.move(p.x+dx, p.y+dy, ms); if(box){ await R.wait(Math.max(0,ms-200)); R.hov(el); } return m; };
@@ -268,13 +276,13 @@ function makeRunner(st){
   R.click = async (el) => { R.ripple(); if(el){ el.classList.add('press'); await R.wait(120); el.classList.remove('press'); } else await R.wait(120); await R.wait(120); };
   R.type = async (box, text, per=75) => { box.classList.add('focus'); const ph=box.querySelector('.ph'); if(ph) ph.remove(); let span=box.querySelector('.tx'); if(!span) span=h('span','tx','',box); if(!box.querySelector('.caret')) h('i','caret','',box); for(const ch of text){ span.textContent+=ch; await R.wait(per); } };
   R.tag = text => { if(!R.cur) R.cursor(); const t=h('span','k-ctag',text,R.cur); return () => t.remove(); };
-  R.keys = async (...labels) => { const k=h('div','k-key','',st); labels.forEach(l=>h('i','',l,k)); await R.wait(900); k.remove(); };
-  R.toast = async (text, ms=1700, act) => { const t=h('div','k-toast',text+(act?'<u>'+act+'</u>':''),st); await R.wait(20); t.classList.add('on'); await R.wait(ms); t.classList.remove('on'); await R.wait(300); t.remove(); };
+  R.keys = bg(async (...labels) => { const k=h('div','k-key','',st); labels.forEach(l=>h('i','',l,k)); await R.wait(900); k.remove(); });
+  R.toast = bg(async (text, ms=1700, act) => { const t=h('div','k-toast',text+(act?'<u>'+act+'</u>':''),st); await R.wait(20); t.classList.add('on'); await R.wait(ms); t.classList.remove('on'); await R.wait(300); t.remove(); });
   R.show = async (el, on=true) => { await R.wait(16); el.classList.toggle('on', on); };
   /* 손가락(휴대폰 장면) — parent 는 화면(.k-scr) */
   R.fin = null;
   R.finger = (parent, x, y) => { R.fin=h('div','k-fin',null,parent); R.fin.style.transitionDuration='0s'; R.fin.style.left=x+'px'; R.fin.style.top=y+'px'; return R.fin; };
-  R.fmove = async (x, y, ms=500) => { R.fin.style.transitionDuration=(RM?0:ms)+'ms,'+(RM?0:ms)+'ms,.2s,.2s'; R.fin.style.left=x+'px'; R.fin.style.top=y+'px'; await R.wait(ms+30); };
+  R.fmove = bg(async (x, y, ms=500) => { R.fin.style.transitionDuration=(RM?0:ms)+'ms,'+(RM?0:ms)+'ms,.2s,.2s'; R.fin.style.left=x+'px'; R.fin.style.top=y+'px'; await R.wait(ms+30); });
   R.tap = async (x, y, gap=180) => { if(x!=null) await R.fmove(x, y, 400); R.fin.classList.add('on','down'); await R.wait(110); R.fin.classList.remove('down'); await R.wait(gap); };
   R.fup = async () => { R.fin.classList.remove('on','down'); await R.wait(220); };
   return R;
@@ -315,14 +323,14 @@ const SLIDES = [
   { kind:'toc', title:'목차', groups:[
     { name:'보기 · 통계', items:['focus','focuscard','stats','statsread','statsnarrow','kind','statsgo'] },
     { name:'찾기 · 거르기', items:['worker','search','multi','namecheck'] },
-    { name:'모바일', items:['mtap','mswipe','mbar','fixes'] },
+    { name:'모바일', items:['mtap','mswipe','mcard','mbar','fixes'] },
   ]},
   { id:'focus', tag:'new', scene:'focus', title:'포커스', line:'지금 갤러리에 보이는 소재를 한 장씩 크게 넘겨 봅니다. 좁혀 둔 그대로 들어가고, 나오면 마지막으로 본 카드로 돌아옵니다.', keys:['T 들어가기 · 나오기','← →','G LIST/GRID'], where:'머리 메뉴 「FOCUS」' },
   { id:'focuscard', tag:'new', scene:'focuscard', title:'크게 본 카드', line:'클릭하면 소리를 켠 채 재생하고, 갤러리 카드와 같은 버튼으로 바로 내려받거나 저장합니다.', keys:['Enter','B 다운로드','C 경로 복사','Z 저장','M 소리'], where:'포커스 → 소재 클릭' },
   { id:'stats', tag:'new', scene:'stats', title:'통계 탭', line:'카테고리 알약을 우클릭하면 「광고주 목록 | 통계」가 함께 열립니다. 언제, 얼마나, 어떤 작업을 했는지 한 화면에.', keys:['우클릭','Tab 탭 전환','모바일 = 꾹'], where:'카테고리 · 작업 성격 알약' },
   { id:'statsread', tag:'new', scene:'statsread', title:'그래프 읽기', line:'월별·분기별·연도별, 막대·선·표로 바꿔 봅니다. 막대에 마우스를 올리면 그 기간의 작업 성격 구성이 나옵니다.', where:'통계 탭' },
   { id:'statsnarrow', tag:'new', scene:'statsnarrow', title:'좁혀 보기', line:'작업 성격 칩을 Ctrl+클릭하면 그것만, 막대를 누르면 그 기간만, 광고주 행을 누르면 그 광고주만 봅니다.', keys:['Ctrl+클릭 그것만','막대 클릭','다시 누르면 해제'], where:'통계 탭' },
-  { id:'kind', tag:'new', scene:'kind', title:'셀 범위 — 시안 · 베리', line:'무엇을 셀지 세 단계로 고릅니다. 시안은 대표본만(평소 숫자), 베리는 접힌 버전만, 시안&베리는 모든 파일.', keys:['1 시안','2 베리','3 시안&베리'], where:'통계 탭 오른쪽 스위치' },
+  { id:'kind', tag:'new', scene:'kind', title:'셀 범위 — 시안 · 베리', line:'무엇을 셀지 세 단계로 고릅니다. 시안은 대표시안만(평소 숫자), 베리는 접힌 버전만, 시안&베리는 모든 파일.', keys:['1 시안','2 베리','3 시안&베리'], where:'통계 탭 오른쪽 스위치' },
   { id:'statsgo', tag:'new', scene:'statsgo', title:'통계에서 갤러리로', line:'통계에서 고른 광고주·기간·작업 성격 그대로 갤러리에서 바로 봅니다. 돌아갈 땐 「↩ 이전 보기」.', where:'통계 범례 오른쪽' },
   { id:'worker', tag:'new', scene:'worker', title:'작업자로 찾기', line:'검색칸에 작업자 이니셜이나 이름을 넣으면 그 사람이 만든 소재가 나옵니다. 파일명의 이니셜로 판정합니다.', where:'검색칸' },
   { id:'search', tag:'imp', scene:'search', title:'더 똑똑해진 검색', line:'여러 단어를 띄어 쓰면 모두 들어간 소재만. 탐색기에서 복사한 폴더 경로를 붙여 넣어도 찾습니다.', keys:['띄어쓰기 = 그리고','Ctrl+V 경로'], where:'검색칸' },
@@ -330,6 +338,7 @@ const SLIDES = [
   { id:'namecheck', tag:'new', scene:'namecheck', title:'파일명 점검', line:'내가 올린 파일 중 이름이 규칙과 다른 것을 찾아 줍니다. 빨간 칸은 틀린 곳, 초록 칸은 고칠 곳.', where:'NAS 설정 → 파일명 점검 · 영상팀' },
   { id:'mtap', tag:'mob', scene:'mtap', title:'톡톡 5초 · 꾹 2배속', line:'영상 양쪽을 두 번 톡톡 누르면 5초씩 앞뒤로, 꾹 누르고 있는 동안은 2배속으로 봅니다.', keys:['두 번 톡톡 ±5초','꾹 2배속'], where:'휴대폰 · 태블릿 플레이어' },
   { id:'mswipe', tag:'mob', scene:'mswipe', title:'밀어서 넘기기 · 닫기', line:'플레이어를 좌우로 밀면 이전·다음 소재로, 아래로 밀면 닫힙니다. 오른쪽 위 X가 빨개지면 손을 뗍니다.', where:'휴대폰 · 태블릿 플레이어' },
+  { id:'mcard', tag:'mob', scene:'mcard', title:'카드 꾹 = 메뉴', line:'갤러리 카드를 꾹 누르면 PC의 우클릭과 같은 메뉴가 뜹니다. 저장·복사·공유·다운로드를 바로 고르고, 메뉴 밖을 누르면 닫힙니다.', keys:['꾹 메뉴','밖을 톡 닫기'], where:'휴대폰 · 태블릿 갤러리' },
   { id:'mbar', tag:'mob', scene:'mbar', title:'새 휴대폰 화면', line:'아래에 떠 있는 유리 알약 바. 누르는 즉시 반응하고, 꾹 누르면 알약이 차오르며 통계가 열립니다.', keys:['톡 고르기','꾹 통계'], where:'휴대폰 메인 화면' },
   { id:'fixes', kind:'fixes', tag:'fix', title:'그 밖에 바뀐 것', line:'알아 두면 좋은 변화들입니다.', items:[
     ['스타일프레임은 빠져요','파일명 끝이 _sf 면 갤러리와 통계에 나오지 않습니다(중간의 sf 는 그대로).'],
@@ -338,6 +347,9 @@ const SLIDES = [
     ['마우스 옆버튼','메인 화면에서 필터의 이전·다음 상태로, 플레이어에서는 이전·다음 소재로.'],
     ['플레이어 · 설정이 한 페이지로','휴대폰에서 위아래 띠까지 자연스럽게 이어지고, 닫으면 보던 자리로 돌아옵니다.'],
     ['홈 화면에 추가','아이폰 사파리 공유 → 「홈 화면에 추가」로 앱처럼 엽니다.'],
+    ['통계 브랜드 펼치기','「광고주별 구성」에서 브랜드가 있는 광고주는 한 줄로 묶고, 이름 옆 「브랜드 수 ›」 알약으로 펼칩니다.'],
+    ['글자 커서가 부드러워요','검색칸 같은 글자 칸에서 커서가 건너뛰지 않고 미끄러지듯 따라갑니다(PC).'],
+    ['폴더 이름에 띄어쓰기','저장 폴더 이름을 고칠 때 띄어쓰기를 쳐도 편집이 끝나지 않습니다.'],
   ]},
 ];
 
@@ -554,7 +566,7 @@ SCENES.focuscard = async (st, R) => {
 
 </script>
 <script>
-/* 셀 범위 — 시안(대표본만 · 기본) → 베리(접힌 버전만) → 시안&베리(모든 파일). 글자 클릭 = 다음 단계 · 1 2 3 키.
+/* 셀 범위 — 시안(대표시안만 · 기본) → 베리(접힌 버전만) → 시안&베리(모든 파일). 글자 클릭 = 다음 단계 · 1 2 3 키.
    광고주 목록의 영상 수도 같이 바뀐다. */
 SCENES.kind = async (st, R) => {
   const S = mkStats(st); S.tab('stats'); S.pop.classList.add('on');
@@ -611,6 +623,48 @@ SCENES.mbar = async (st, R) => {
   R.finger(scr, 90, 120); await R.wait(30); R.fin.classList.add('on');
   R.fmove(90, 300, 600); sh.style.transform = 'translateY(100%)'; await R.wait(620); await R.fup();
   await R.wait(500);
+};
+
+</script>
+<script>
+/* 카드 꾹 = 메뉴(휴대폰 · front li·lj·ll) — 카드를 꾹 누르면 PC 우클릭과 같은 원형 메뉴(저장 · 복사 · 공유 · 다운로드 — 앱 index.html 의 이름표 그대로).
+   휴대폰은 손가락 위로 펼치고 이름표가 늘 보인다 · 메뉴 밖을 누르면 닫히기만 한다(아래 카드는 안 열림). 「분류 변경」은 관리자 전용이라 그리지 않는다 */
+SCENES.mcard = async (st, R) => {
+  const scr = mkPhone(st);
+  const gal = h('div', '', [2, 3, 4, 5, 6, 7].map(i => '<div class="cd" style="position:relative;aspect-ratio:4/5;border-radius:12px;corner-shape:superellipse(1.3);overflow:hidden;transition:transform .2s,filter .25s">' + thumb(i) + '</div>').join(''), scr);
+  gal.style.cssText = 'position:absolute;left:8px;right:8px;top:36px;display:grid;grid-template-columns:1fr 1fr;gap:6px';
+  const card = gal.querySelectorAll('.cd')[2];
+  const IC = {
+    save: '<path d="M7 4h10v16l-5-3.5L7 20z" fill="currentColor"/>',
+    copy: '<rect x="8" y="8" width="11" height="11" rx="2" fill="currentColor"/><path d="M5 15V6a1 1 0 0 1 1-1h9" fill="none" stroke="currentColor" stroke-width="2"/>',
+    share: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 12h16M12 4c3 3 3 13 0 16M12 4c-3 3-3 13 0 16" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+    down: '<path d="M12 4v11m-5-5 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  };
+  const ITEMS = [['저장', 'save', -66, -10], ['복사', 'copy', -24, -46], ['공유', 'share', 24, -46], ['다운로드', 'down', 66, -10]];
+  const dim = h('div', '', '', scr); dim.style.cssText = 'position:absolute;inset:0;background:rgba(12,10,9,.18);opacity:0;transition:opacity .25s;z-index:15;pointer-events:none';
+  const menu = h('div', '', ITEMS.map(([lb, ic, dx, dy]) => '<div class="rb" style="position:absolute;left:0;top:0;transform:translate(-50%,-50%) scale(.3);opacity:0;transition:transform .32s var(--spring),opacity .2s;--x:' + dx + 'px;--y:' + dy + 'px">'
+    + '<b style="position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%);white-space:nowrap;font:700 8px var(--f);color:#fff;background:var(--ink);border-radius:8px;padding:2px 6px">' + lb + '</b>'
+    + '<span style="width:30px;height:30px;border-radius:50%;background:#fff;color:var(--ink);display:grid;place-items:center;box-shadow:0 6px 14px -6px rgba(0,0,0,.45)"><svg viewBox="0 0 24 24" width="12" height="12">' + IC[ic] + '</svg></span></div>').join(''), scr);
+  menu.style.cssText = 'position:absolute;width:0;height:0;z-index:20';
+  R.finger(scr, 150, 330);
+  await R.wait(700);
+  // 꾹 누르기(0.42초) — 카드가 살짝 눌렸다가 메뉴가 손가락 위로 펼쳐진다
+  // 자리는 offset 으로 잰다(발표 무대가 화면 크기에 맞춰 배율이 걸려도 틀 안 좌표가 그대로이게 — mbar 와 같은 방식)
+  const cx = 8 + card.offsetLeft + card.offsetWidth / 2, py = 36 + card.offsetTop + card.offsetHeight * 0.55;
+  const px = Math.max(86, Math.min(scr.clientWidth - 86, cx));   // 메뉴는 화면 안으로 옮긴다(앱과 같다 — 가장자리 카드에서도 단추가 잘리지 않게)
+  await R.fmove(cx, py, 520); R.fin.classList.add('on', 'down'); card.style.transform = 'scale(.97)';
+  await R.wait(420);
+  card.style.transform = ''; dim.style.opacity = 1;
+  menu.style.left = px + 'px'; menu.style.top = (py - 6) + 'px';
+  menu.querySelectorAll('.rb').forEach((b, i) => setTimeout(() => { b.style.opacity = 1; b.style.transform = 'translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1)'; }, i * 45));
+  await R.wait(200); R.fin.classList.remove('down'); await R.fup();
+  await R.wait(2200);
+  // 메뉴 밖을 톡 = 닫히기만(아래 카드는 열리지 않음)
+  R.finger(scr, 40, 110); await R.wait(260); R.fin.classList.add('on', 'down');
+  await R.wait(120);
+  menu.querySelectorAll('.rb').forEach(b => { b.style.opacity = 0; b.style.transform = 'translate(-50%,-50%) scale(.3)'; }); dim.style.opacity = 0;
+  R.fin.classList.remove('down'); await R.fup();
+  await R.wait(1300);
 };
 
 </script>
@@ -948,7 +1002,7 @@ SLIDES.forEach((s,i)=>{
   } else if(s.kind==='toc'){
     el.innerHTML=topBar(i)+'<div class="toc">'+s.groups.map(g=>'<div><h3>'+g.name+'</h3><ol>'+g.items.map(it=>{ const j=SLIDES.findIndex(x=>x.id===it); return '<li><button type="button" data-go="'+j+'"><i>'+String(j+1).padStart(2,'0')+'</i>'+SLIDES[j].title+'<em>'+TAGS[SLIDES[j].tag][1]+'</em></button></li>'; }).join('')+'</ol></div>').join('')+'</div>';
   } else if(s.kind==='fixes'){
-    el.innerHTML=topBar(i)+'<div class="fixhd"><span class="tag fix">'+TAGS.fix[1]+'</span><h2>'+s.title+'</h2><p>'+s.line+'</p></div><div class="fixes">'+s.items.map((f,k)=>'<div class="fx" style="transition-delay:'+(k*70)+'ms"><span class="ck">'+CK+'</span><b>'+f[0]+'</b><span>'+f[1]+'</span></div>').join('')+'</div>';
+    el.innerHTML=topBar(i)+'<div class="fixhd"><span class="tag fix">'+TAGS.fix[1]+'</span><h2>'+s.title+'</h2><p>'+s.line+'</p></div><div class="fixes'+(s.items.length>6?' dense':'')+'">'+s.items.map((f,k)=>'<div class="fx" style="transition-delay:'+(k*70)+'ms"><span class="ck">'+CK+'</span><b>'+f[0]+'</b><span>'+f[1]+'</span></div>').join('')+'</div>';
   } else {
     const t=TAGS[s.tag];
     el.innerHTML=topBar(i)+'<div class="side"><span class="tag '+t[0]+'">'+t[1]+'</span><h2>'+s.title+'</h2><p>'+s.line+'</p>'+(s.keys?'<div class="keys">'+s.keys.map(k=>'<span class="kc">'+k+'</span>').join('')+'</div>':'')+'<span class="where">'+s.where+'</span></div>'
