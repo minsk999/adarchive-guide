@@ -58,6 +58,12 @@
     font-weight:800; font-size:0.9rem; transition:background 0.16s; }
   .sb-cta:hover { background:#292524; }
   .sb-cta svg { width:0.95em; height:0.95em; }
+  .sb-new { display:flex; align-items:center; gap:0.6rem; text-decoration:none; color:var(--black);
+    border:1px solid var(--line); background:#fff; border-radius:0.9rem; padding:0.62rem 0.8rem; margin-bottom:0.6rem;
+    font-weight:800; font-size:0.86rem; transition:border-color 0.16s; }
+  .sb-new:hover { border-color:var(--stone-300); }
+  .sb-new span { display:block; font-weight:600; font-size:0.72rem; color:var(--stone-400); margin-top:0.1rem; }
+  .sb-new .go { margin-left:auto; color:var(--stone-400); }
   .sb-foot { margin-top:0.75rem; font-size:0.72rem; color:var(--stone-400); text-align:center; line-height:1.5; }
 
   /* ───── 콘텐츠 ───── */
@@ -207,6 +213,7 @@
       </div>
     </nav>
 
+    <a class="sb-new" href="whatsnew/"><div>신규 기능<span>2026년 11월 업데이트 · 시연 영상</span></div><b class="go">→</b></a>
     <a class="sb-cta" href="https://crnas.adef.co.kr:8444" target="_blank" rel="noopener">
       ad.archive 열기
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M9 7h8v8"/></svg>
